@@ -659,37 +659,43 @@
                     startRetroLoadingAnimation()
                         .then(() => {
                             // After animation completes, try to submit the form
-                            tryFetchSubmission(email)
-                                .then(success => {
-                                    if (success) {
-                                        showThankYouPage();
-                                    } else {
+                            try {
+                                tryFetchSubmission(email)
+                                    .catch(error => {
+                                        console.error('Error in fetch submission:', error);
+                                        // If fetch fails, use iframe method instead
                                         fallbackFormSubmission(email);
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error('Error in fetch submission:', error);
-                                    fallbackFormSubmission(email);
-                                })
-                                .finally(() => {
-                                    // Reset button state after submission
-                                    submitBtn.textContent = "Join the waitlist";
-                                    submitBtn.disabled = false;
-                                    submitBtn.classList.remove('retro-loading');
-                                    
-                                    // Remove animation elements
-                                    const tvStatic = submitBtn.querySelector('.tv-static');
-                                    const progressBar = submitBtn.querySelector('.progress-bar');
-                                    const loadingText = submitBtn.querySelector('.loading-text');
-                                    
-                                    if (tvStatic) tvStatic.remove();
-                                    if (progressBar) progressBar.remove();
-                                    if (loadingText) loadingText.remove();
-                                });
+                                    })
+                                    .finally(() => {
+                                        // Reset button state after submission
+                                        resetButtonAfterSubmission();
+                                    });
+                            } catch (error) {
+                                console.error('Error during submission:', error);
+                                // If there's any error, use the fallback method
+                                fallbackFormSubmission(email);
+                                resetButtonAfterSubmission();
+                            }
                         });
                 } else {
                     showEmailError();
                 }
+            }
+            
+            function resetButtonAfterSubmission() {
+                // Reset button state
+                submitBtn.textContent = "Join the waitlist";
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('retro-loading');
+                
+                // Remove animation elements
+                const tvStatic = submitBtn.querySelector('.tv-static');
+                const progressBar = submitBtn.querySelector('.progress-bar');
+                const loadingText = submitBtn.querySelector('.loading-text');
+                
+                if (tvStatic) tvStatic.remove();
+                if (progressBar) progressBar.remove();
+                if (loadingText) loadingText.remove();
             }
             
             function startRetroLoadingAnimation() {
@@ -750,6 +756,8 @@
                                         'event_label': 'waitlist'
                                     });
                                 }
+                                // Show thank you page on success
+                                showThankYouPage();
                                 resolve(true);
                             } else {
                                 resolve(false);
@@ -764,10 +772,20 @@
             }
             
             function fallbackFormSubmission(email) {
-                // Create a hidden form for submission
+                // Instead of redirecting to Formspree, we'll use an iframe for submission
+                // This keeps the user on our page while still submitting the form
+                
+                // Create a hidden iframe
+                const iframe = document.createElement('iframe');
+                iframe.name = 'hidden_iframe';
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+                
+                // Create a hidden form targeting the iframe
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = 'https://formspree.io/f/xrbewayn';
+                form.target = 'hidden_iframe'; // Submit to iframe instead of navigating
                 form.style.display = 'none';
                 
                 const emailField = document.createElement('input');
@@ -780,17 +798,27 @@
                 subjectField.name = '_subject';
                 subjectField.value = 'New SourceSupply.ai Waitlist Signup';
                 
-                const redirectField = document.createElement('input');
-                redirectField.type = 'hidden';
-                redirectField.name = '_next';
-                redirectField.value = window.location.href + '?submitted=true';
+                // Not needed anymore since we're not using redirect
+                // const redirectField = document.createElement('input'); 
+                // redirectField.type = 'hidden';
+                // redirectField.name = '_next';
+                // redirectField.value = window.location.href + '?submitted=true';
                 
                 form.appendChild(emailField);
                 form.appendChild(subjectField);
-                form.appendChild(redirectField);
                 document.body.appendChild(form);
                 
+                // Show thank you page immediately, no need to wait for form submission to complete
+                showThankYouPage();
+                
+                // Submit the form to the hidden iframe
                 form.submit();
+                
+                // Clean up after a short delay
+                setTimeout(() => {
+                    if (document.body.contains(form)) document.body.removeChild(form);
+                    if (document.body.contains(iframe)) document.body.removeChild(iframe);
+                }, 5000);
             }
             
             function showEmailError() {
