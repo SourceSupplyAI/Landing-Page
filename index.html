@@ -494,10 +494,17 @@
             
             // Check for URL parameters that might indicate a redirect from form submission
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('submitted') && urlParams.get('submitted') === 'true') {
+            // Only check for the submitted parameter if we're on the actual domain, not during local testing
+            if (window.location.protocol !== 'file:' && urlParams.has('submitted') && urlParams.get('submitted') === 'true') {
                 showThankYouPage();
                 // Clean up the URL
                 window.history.replaceState({}, document.title, window.location.pathname);
+            } else {
+                // Ensure the landing page is visible and thank you page is hidden on initial load
+                landingContainer.style.display = 'flex';
+                landingContainer.style.flexDirection = 'column';
+                landingContainer.style.alignItems = 'center';
+                thankYouContainer.style.display = 'none';
             }
             
             // Back button functionality
@@ -642,8 +649,6 @@
             function showThankYouPage() {
                 landingContainer.style.display = 'none';
                 thankYouContainer.style.display = 'flex';
-                thankYouContainer.style.flexDirection = 'column';
-                thankYouContainer.style.alignItems = 'center';
                 thankYouContainer.classList.add('animated');
                 
                 // Track page view
