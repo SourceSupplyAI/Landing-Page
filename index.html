@@ -720,16 +720,16 @@
                     loadingText.textContent = "LOADING...";
                     submitBtn.appendChild(loadingText);
                     
-                    // Start animations
+                    // Start animations - make much faster
                     setTimeout(() => {
-                        progressBar.style.animation = 'progressAnimation 2s ease-in-out forwards';
-                        loadingText.style.animation = 'textPulse 1s infinite';
+                        progressBar.style.animation = 'progressAnimation 0.7s ease-in-out forwards';
+                        loadingText.style.animation = 'textPulse 0.5s infinite';
                         loadingText.style.opacity = '1';
                         
-                        // Resolve promise after animation completes
+                        // Resolve promise after animation completes - reduced from 2000ms to 700ms
                         setTimeout(() => {
                             resolve();
-                        }, 2000);
+                        }, 700);
                     }, 50);
                 });
             }
@@ -846,7 +846,7 @@
                 // Increment and display the waitlist number with animation
                 waitlistCount++;
                 waitlistNumber.textContent = waitlistCount.toString();
-                waitlistNumber.style.animation = 'countUp 0.8s ease-out forwards';
+                waitlistNumber.style.animation = 'countUp 0.4s ease-out forwards';
                 
                 // Store the updated count
                 try {
