@@ -191,6 +191,74 @@
             transform: none;
             cursor: not-allowed;
         }
+
+        /* Retro game loading animation styles */
+        .retro-loading {
+            position: relative;
+            overflow: hidden;
+            background: #111 !important;
+            color: transparent !important;
+            border: 2px solid #444 !important;
+            cursor: default !important;
+            transform: none !important;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+        }
+        
+        .tv-static {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iLjA1Ii8+PC9zdmc+');
+            opacity: 0.3;
+        }
+        
+        .progress-bar {
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right, 
+                transparent, 
+                rgba(139, 92, 246, 0.2), 
+                rgba(232, 121, 249, 0.4), 
+                rgba(139, 92, 246, 0.2), 
+                transparent
+            );
+            animation: none;
+        }
+        
+        .loading-text {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #e879f9;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 14px;
+            opacity: 0;
+            text-shadow: 0 0 5px #8b5cf6;
+        }
+        
+        @keyframes progressAnimation {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        @keyframes textPulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
         
         .features {
             display: flex;
@@ -360,6 +428,34 @@
         .animated {
             animation: fadeIn 0.5s ease-out forwards;
         }
+        
+        .waitlist-counter {
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 18px;
+            color: #a1a1aa;
+        }
+        
+        .waitlist-number {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #e879f9, #8b5cf6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            padding: 0 8px;
+            display: inline-block;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        @keyframes countUp {
+            0% { transform: translateY(20px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -483,6 +579,22 @@
                 background.appendChild(star);
             }
             
+            // Waitlist counter - start from a base number and increment
+            let waitlistCount = 486; // Starting count
+            try {
+                // Try to get from localStorage if available
+                const storedCount = localStorage.getItem('waitlistCount');
+                if (storedCount) {
+                    waitlistCount = parseInt(storedCount);
+                } else {
+                    // If not in storage, save our initial value
+                    localStorage.setItem('waitlistCount', waitlistCount.toString());
+                }
+            } catch (e) {
+                // If localStorage is not available or fails, just use the default
+                console.log('Unable to access localStorage, using default count');
+            }
+            
             // Form elements
             const emailInput = document.getElementById('email-input');
             const submitBtn = document.getElementById('submit-button');
@@ -491,11 +603,20 @@
             const landingContainer = document.getElementById('landing-container');
             const thankYouContainer = document.getElementById('thank-you-container');
             const backButton = document.getElementById('back-button');
+            const waitlistNumber = document.getElementById('waitlist-number');
             
             // Check for URL parameters that might indicate a redirect from form submission
             const urlParams = new URLSearchParams(window.location.search);
             // Only check for the submitted parameter if we're on the actual domain, not during local testing
             if (window.location.protocol !== 'file:' && urlParams.has('submitted') && urlParams.get('submitted') === 'true') {
+                // If redirected back after submission, increment the counter
+                waitlistCount++;
+                try {
+                    localStorage.setItem('waitlistCount', waitlistCount.toString());
+                } catch (e) {
+                    console.log('Unable to store count in localStorage');
+                }
+                
                 showThankYouPage();
                 // Clean up the URL
                 window.history.replaceState({}, document.title, window.location.pathname);
@@ -534,34 +655,77 @@
                 const email = emailInput.value.trim();
                 
                 if (email && isValidEmail(email)) {
-                    // Show loading state
-                    submitBtn.textContent = "Joining...";
-                    submitBtn.disabled = true;
-                    
-                    // Hide any previous messages
-                    successMessage.style.display = 'none';
-                    errorMessage.style.display = 'none';
-                    
-                    // Try to use the Fetch API first (better user experience)
-                    tryFetchSubmission(email)
-                        .then(success => {
-                            if (success) {
-                                showThankYouPage();
-                            } else {
-                                fallbackFormSubmission(email);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error in fetch submission:', error);
-                            fallbackFormSubmission(email);
-                        })
-                        .finally(() => {
-                            submitBtn.textContent = "Join the waitlist";
-                            submitBtn.disabled = false;
+                    // Start the retro game loading animation
+                    startRetroLoadingAnimation()
+                        .then(() => {
+                            // After animation completes, try to submit the form
+                            tryFetchSubmission(email)
+                                .then(success => {
+                                    if (success) {
+                                        showThankYouPage();
+                                    } else {
+                                        fallbackFormSubmission(email);
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error in fetch submission:', error);
+                                    fallbackFormSubmission(email);
+                                })
+                                .finally(() => {
+                                    // Reset button state after submission
+                                    submitBtn.textContent = "Join the waitlist";
+                                    submitBtn.disabled = false;
+                                    submitBtn.classList.remove('retro-loading');
+                                    
+                                    // Remove animation elements
+                                    const tvStatic = submitBtn.querySelector('.tv-static');
+                                    const progressBar = submitBtn.querySelector('.progress-bar');
+                                    const loadingText = submitBtn.querySelector('.loading-text');
+                                    
+                                    if (tvStatic) tvStatic.remove();
+                                    if (progressBar) progressBar.remove();
+                                    if (loadingText) loadingText.remove();
+                                });
                         });
                 } else {
                     showEmailError();
                 }
+            }
+            
+            function startRetroLoadingAnimation() {
+                return new Promise(resolve => {
+                    // Disable button and set loading state
+                    submitBtn.disabled = true;
+                    submitBtn.classList.add('retro-loading');
+                    
+                    // Create TV static effect
+                    const tvStatic = document.createElement('div');
+                    tvStatic.classList.add('tv-static');
+                    submitBtn.appendChild(tvStatic);
+                    
+                    // Create progress bar
+                    const progressBar = document.createElement('div');
+                    progressBar.classList.add('progress-bar');
+                    submitBtn.appendChild(progressBar);
+                    
+                    // Create loading text
+                    const loadingText = document.createElement('div');
+                    loadingText.classList.add('loading-text');
+                    loadingText.textContent = "LOADING...";
+                    submitBtn.appendChild(loadingText);
+                    
+                    // Start animations
+                    setTimeout(() => {
+                        progressBar.style.animation = 'progressAnimation 2s ease-in-out forwards';
+                        loadingText.style.animation = 'textPulse 1s infinite';
+                        loadingText.style.opacity = '1';
+                        
+                        // Resolve promise after animation completes
+                        setTimeout(() => {
+                            resolve();
+                        }, 2000);
+                    }, 50);
+                });
             }
             
             function tryFetchSubmission(email) {
@@ -651,11 +815,30 @@
                 thankYouContainer.style.display = 'flex';
                 thankYouContainer.classList.add('animated');
                 
+                // Increment and display the waitlist number with animation
+                waitlistCount++;
+                waitlistNumber.textContent = waitlistCount.toString();
+                waitlistNumber.style.animation = 'countUp 0.8s ease-out forwards';
+                
+                // Store the updated count
+                try {
+                    localStorage.setItem('waitlistCount', waitlistCount.toString());
+                } catch (e) {
+                    console.log('Unable to store count in localStorage');
+                }
+                
                 // Track page view
                 if (typeof gtag !== 'undefined') {
                     gtag('event', 'page_view', {
                         'page_title': 'Thank You',
                         'page_path': '/thank-you'
+                    });
+                    
+                    // Also track the waitlist position
+                    gtag('event', 'waitlist_position', {
+                        'event_category': 'engagement',
+                        'event_label': 'waitlist_number',
+                        'value': waitlistCount
                     });
                 }
             }
